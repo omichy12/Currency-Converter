@@ -1,437 +1,451 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Currency Converter</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+import React, { useState, useEffect, useRef } from 'react';
+import { Zap, Crown, Sparkles, TrendingUp, Flame } from 'lucide-react';
+
+const MoneyGenerator = () => {
+  const [balance, setBalance] = useState(0);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [particles, setParticles] = useState([]);
+  const [streak, setStreak] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
+  const [shockwaves, setShockwaves] = useState([]);
+  const [floatingTexts, setFloatingTexts] = useState([]);
+  const canvasRef = useRef(null);
+
+  const currencies = [
+    { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸', color: '#10b981', emoji: '💵' },
+    { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺', color: '#3b82f6', emoji: '💶' },
+    { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧', color: '#8b5cf6', emoji: '💷' },
+    { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵', color: '#ef4444', emoji: '💴' },
+    { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳', color: '#f59e0b', emoji: '💴' },
+    { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳', color: '#06b6d4', emoji: '💰' },
+    { code: 'AUD', symbol: '$', name: 'Australian Dollar', flag: '🇦🇺', color: '#14b8a6', emoji: '💵' },
+    { code: 'CAD', symbol: '$', name: 'Canadian Dollar', flag: '🇨🇦', color: '#ec4899', emoji: '💵' },
+    { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷', color: '#84cc16', emoji: '💰' },
+    { code: 'MXN', symbol: '$', name: 'Mexican Peso', flag: '🇲🇽', color: '#a855f7', emoji: '💵' },
+    { code: 'BDT', symbol: '৳', name: 'Bangladeshi Taka', flag: '🇧🇩', color: '#10b981', emoji: '💸' },
+    { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', flag: '🇦🇪', color: '#fbbf24', emoji: '💰' },
+  ];
+
+  const getCurrentCurrency = () => currencies.find(c => c.code === selectedCurrency);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let animationId;
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw particles with trails
+      particles.forEach((particle, index) => {
+        particle.y += particle.speedY;
+        particle.x += particle.speedX;
+        particle.speedY += 0.3; // Gravity
+        particle.rotation += particle.rotationSpeed;
+        particle.life -= 1;
+        particle.opacity = Math.max(0, particle.life / 100);
+
+        ctx.save();
+        ctx.translate(particle.x, particle.y);
+        ctx.rotate(particle.rotation);
+        ctx.globalAlpha = particle.opacity;
         
-        body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            color: #333;
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        // Glow effect
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = particle.color;
         
-        .container {
-            max-width: 1000px;
-            width: 100%;
-            margin: 0 auto;
-        }
+        ctx.font = `bold ${particle.size}px Arial`;
+        ctx.fillStyle = particle.color;
+        ctx.fillText(particle.text, -particle.size/2, particle.size/2);
         
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        ctx.restore();
+
+        if (particle.life <= 0 || particle.y > canvas.height) {
+          particles.splice(index, 1);
         }
-        
-        h1 {
-            font-size: 2.8rem;
-            color: #1a2a6c;
-            margin-bottom: 10px;
+      });
+
+      animationId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => cancelAnimationFrame(animationId);
+  }, [particles]);
+
+  const createShockwave = (x, y) => {
+    const wave = { id: Date.now() + Math.random(), x, y };
+    setShockwaves(prev => [...prev, wave]);
+    setTimeout(() => {
+      setShockwaves(prev => prev.filter(w => w.id !== wave.id));
+    }, 1000);
+  };
+
+  const createFloatingText = (amount) => {
+    const text = { 
+      id: Date.now(), 
+      amount, 
+      x: 50 + Math.random() * 50,
+      y: 50
+    };
+    setFloatingTexts(prev => [...prev, text]);
+    setTimeout(() => {
+      setFloatingTexts(prev => prev.filter(t => t.id !== text.id));
+    }, 2000);
+  };
+
+  const generateMoney = (e) => {
+    if (isGenerating) return;
+    
+    setIsGenerating(true);
+    const baseAmount = Math.floor(Math.random() * 10000) + 5000;
+    const finalAmount = Math.floor(baseAmount * multiplier);
+    
+    setBalance(prev => prev + finalAmount);
+    setStreak(prev => prev + 1);
+
+    if ((streak + 1) % 3 === 0) {
+      setMultiplier(prev => Math.min(prev + 1, 20));
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    createShockwave(centerX, centerY);
+    createFloatingText(finalAmount);
+
+    // Create massive particle explosion
+    const currency = getCurrentCurrency();
+    const particleCount = 80;
+    const newParticles = Array.from({ length: particleCount }, (_, i) => {
+      const angle = (i / particleCount) * Math.PI * 2;
+      const speed = Math.random() * 15 + 10;
+      return {
+        x: centerX,
+        y: centerY,
+        speedX: Math.cos(angle) * speed,
+        speedY: Math.sin(angle) * speed - Math.random() * 5,
+        text: Math.random() > 0.5 ? currency.symbol : currency.emoji,
+        size: Math.random() * 40 + 30,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.3,
+        life: 100,
+        opacity: 1,
+        color: currency.color
+      };
+    });
+
+    setParticles(prev => [...prev, ...newParticles]);
+
+    // Vibration effect
+    if (navigator.vibrate) {
+      navigator.vibrate([50, 30, 50]);
+    }
+
+    setTimeout(() => setIsGenerating(false), 200);
+  };
+
+  const formatNumber = (num) => {
+    if (num >= 1000000000) return `${(num / 1000000000).toFixed(2)}B`;
+    if (num >= 1000000) return `${(num / 1000000).toFixed(2)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toFixed(0);
+  };
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-black">
+      <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
-        
-        .tagline {
-            font-size: 1.2rem;
-            color: #555;
-            margin-bottom: 20px;
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(5deg); }
         }
-        
-        .converter-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            margin-bottom: 30px;
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.8; }
         }
-        
-        .input-group {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
+        @keyframes shockwave {
+          0% { transform: scale(0); opacity: 1; }
+          100% { transform: scale(4); opacity: 0; }
         }
-        
-        .amount-input {
-            flex: 1;
-            min-width: 200px;
+        @keyframes slideUp {
+          0% { transform: translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-200px) scale(1.5); opacity: 0; }
         }
-        
-        .currency-select {
-            flex: 1;
-            min-width: 200px;
+        @keyframes rainbow {
+          0% { filter: hue-rotate(0deg); }
+          100% { filter: hue-rotate(360deg); }
         }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #444;
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(-3deg); }
+          50% { transform: rotate(3deg); }
         }
-        
-        input, select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s;
+        @keyframes glow {
+          0%, 100% { filter: drop-shadow(0 0 10px currentColor) brightness(1); }
+          50% { filter: drop-shadow(0 0 30px currentColor) brightness(1.5); }
         }
-        
-        input:focus, select:focus {
-            border-color: #1a2a6c;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.2);
+        .animated-bg {
+          background: linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #ff0080, #ff8c00);
+          background-size: 400% 400%;
+          animation: gradientShift 3s ease infinite;
         }
-        
-        .swap-btn {
-            background: #1a2a6c;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 0 10px;
+        .glass {
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(20px);
+          border: 2px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .swap-btn:hover {
-            background: #fdbb2d;
-            transform: rotate(180deg);
+        .text-glow {
+          text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
         }
-        
-        .convert-btn {
-            background: linear-gradient(to right, #1a2a6c, #b21f1f);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            width: 100%;
-            margin-top: 10px;
+        .neon-border {
+          box-shadow: 0 0 20px currentColor, inset 0 0 20px currentColor, 0 0 40px currentColor;
         }
-        
-        .convert-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .result {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            text-align: center;
-            border-left: 5px solid #1a2a6c;
-        }
-        
-        .result-amount {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #1a2a6c;
-            margin: 10px 0;
-        }
-        
-        .currency-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
-        }
-        
-        .currency-card {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s;
-        }
-        
-        .currency-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        .currency-flag {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-        
-        .currency-name {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .currency-code {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .disclaimer {
-            text-align: center;
-            margin-top: 30px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            font-size: 0.9rem;
-            color: #666;
-        }
-        
-        @media (max-width: 768px) {
-            .input-group {
-                flex-direction: column;
-            }
-            
-            .swap-btn {
-                margin: 10px 0;
-                transform: rotate(90deg);
-            }
-            
-            h1 {
-                font-size: 2.2rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-money-bill-wave"></i> Global Currency Converter</h1>
-            <p class="tagline">Convert between 150+ world currencies with real-time exchange rates</p>
-        </header>
-        
-        <div class="converter-card">
-            <div class="input-group">
-                <div class="amount-input">
-                    <label for="amount">Amount</label>
-                    <input type="number" id="amount" value="100" min="0" step="0.01">
-                </div>
-                
-                <div class="currency-select">
-                    <label for="from-currency">From Currency</label>
-                    <select id="from-currency">
-                        <option value="USD" selected>United States Dollar (USD)</option>
-                        <option value="EUR">Euro (EUR)</option>
-                        <option value="GBP">British Pound (GBP)</option>
-                        <option value="JPY">Japanese Yen (JPY)</option>
-                        <option value="CAD">Canadian Dollar (CAD)</option>
-                        <option value="AUD">Australian Dollar (AUD)</option>
-                        <option value="CHF">Swiss Franc (CHF)</option>
-                        <option value="CNY">Chinese Yuan (CNY)</option>
-                        <option value="INR">Indian Rupee (INR)</option>
-                    </select>
-                </div>
-                
-                <button class="swap-btn" id="swap-currencies">
-                    <i class="fas fa-exchange-alt"></i>
-                </button>
-                
-                <div class="currency-select">
-                    <label for="to-currency">To Currency</label>
-                    <select id="to-currency">
-                        <option value="EUR">Euro (EUR)</option>
-                        <option value="USD" selected>United States Dollar (USD)</option>
-                        <option value="GBP">British Pound (GBP)</option>
-                        <option value="JPY">Japanese Yen (JPY)</option>
-                        <option value="CAD">Canadian Dollar (CAD)</option>
-                        <option value="AUD">Australian Dollar (AUD)</option>
-                        <option value="CHF">Swiss Franc (CHF)</option>
-                        <option value="CNY">Chinese Yuan (CNY)</option>
-                        <option value="INR">Indian Rupee (INR)</option>
-                    </select>
-                </div>
-            </div>
-            
-            <button class="convert-btn" id="convert">
-                <i class="fas fa-calculator"></i> Convert Currency
-            </button>
-            
-            <div class="result">
-                <p>Conversion Result</p>
-                <div class="result-amount" id="result-amount">0.00</div>
-                <p id="conversion-text">100 USD = 0.00 EUR</p>
-            </div>
+      `}</style>
+
+      {/* Mega animated background */}
+      <div className="absolute inset-0 animated-bg opacity-50"></div>
+      
+      {/* Floating orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full blur-3xl"
+            style={{
+              width: Math.random() * 300 + 100,
+              height: Math.random() * 300 + 100,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              background: `radial-gradient(circle, ${['#ff0080', '#00ff88', '#00d4ff', '#ffaa00'][i % 4]} 0%, transparent 70%)`,
+              animation: `float ${Math.random() * 10 + 10}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`,
+              opacity: 0.3
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Shockwaves */}
+      {shockwaves.map(wave => (
+        <div
+          key={wave.id}
+          className="absolute rounded-full border-8 pointer-events-none z-30"
+          style={{
+            left: wave.x,
+            top: wave.y,
+            width: 100,
+            height: 100,
+            marginLeft: -50,
+            marginTop: -50,
+            borderColor: getCurrentCurrency().color,
+            animation: 'shockwave 1s ease-out forwards',
+            boxShadow: `0 0 50px ${getCurrentCurrency().color}`
+          }}
+        />
+      ))}
+
+      {/* Floating amount texts */}
+      {floatingTexts.map(text => (
+        <div
+          key={text.id}
+          className="absolute text-6xl font-black pointer-events-none z-40"
+          style={{
+            left: `${text.x}%`,
+            top: `${text.y}%`,
+            color: getCurrentCurrency().color,
+            animation: 'slideUp 2s ease-out forwards',
+            textShadow: `0 0 30px ${getCurrentCurrency().color}, 0 0 60px ${getCurrentCurrency().color}`
+          }}
+        >
+          +{getCurrentCurrency().symbol}{formatNumber(text.amount)}
         </div>
-        
-        <h2 style="color: white; text-align: center; margin: 20px 0;">World Currencies</h2>
-        
-        <div class="currency-grid">
-            <div class="currency-card">
-                <div class="currency-flag">🇺🇸</div>
-                <div class="currency-name">US Dollar</div>
-                <div class="currency-code">USD</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇪🇺</div>
-                <div class="currency-name">Euro</div>
-                <div class="currency-code">EUR</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇬🇧</div>
-                <div class="currency-name">British Pound</div>
-                <div class="currency-code">GBP</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇯🇵</div>
-                <div class="currency-name">Japanese Yen</div>
-                <div class="currency-code">JPY</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇨🇦</div>
-                <div class="currency-name">Canadian Dollar</div>
-                <div class="currency-code">CAD</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇦🇺</div>
-                <div class="currency-name">Australian Dollar</div>
-                <div class="currency-code">AUD</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇨🇭</div>
-                <div class="currency-name">Swiss Franc</div>
-                <div class="currency-code">CHF</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇨🇳</div>
-                <div class="currency-name">Chinese Yuan</div>
-                <div class="currency-code">CNY</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇮🇳</div>
-                <div class="currency-name">Indian Rupee</div>
-                <div class="currency-code">INR</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇧🇷</div>
-                <div class="currency-name">Brazilian Real</div>
-                <div class="currency-code">BRL</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇷🇺</div>
-                <div class="currency-name">Russian Ruble</div>
-                <div class="currency-code">RUB</div>
-            </div>
-            
-            <div class="currency-card">
-                <div class="currency-flag">🇿🇦</div>
-                <div class="currency-name">South African Rand</div>
-                <div class="currency-code">ZAR</div>
-            </div>
+      ))}
+
+      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-20" />
+
+      <div className="relative z-30 max-w-7xl mx-auto p-4 md:p-8">
+        {/* Epic Header */}
+        <div className="text-center mb-12">
+          <div className="inline-block mb-6" style={{ animation: 'float 3s ease-in-out infinite' }}>
+            <h1 className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-500 to-cyan-400 text-glow mb-2"
+                style={{ animation: 'rainbow 5s linear infinite' }}>
+              💎 MONEY MACHINE 💎
+            </h1>
+          </div>
+          <div className="flex items-center justify-center gap-6 mb-4">
+            <Zap className="w-16 h-16 text-yellow-400" style={{ animation: 'glow 1s infinite' }} />
+            <p className="text-4xl md:text-5xl font-black text-white text-glow">
+              TAP TO GET RICH!
+            </p>
+            <Flame className="w-16 h-16 text-orange-500" style={{ animation: 'glow 1s infinite' }} />
+          </div>
         </div>
-        
-        <div class="disclaimer">
-            <p><i class="fas fa-info-circle"></i> Note: Exchange rates are for demonstration purposes only. For real-time rates, please use a financial service.</p>
+
+        {/* Mega Multiplier Display */}
+        {multiplier > 1 && (
+          <div className="text-center mb-8" style={{ animation: 'pulse 0.5s infinite' }}>
+            <div className="inline-block glass rounded-full px-12 py-6 neon-border"
+                 style={{ 
+                   animation: 'wiggle 0.3s infinite',
+                   borderColor: '#ffd700',
+                   color: '#ffd700'
+                 }}>
+              <Crown className="inline w-12 h-12 mr-4" style={{ animation: 'glow 1s infinite' }} />
+              <span className="text-5xl font-black text-glow">{multiplier}x MEGA BOOST!</span>
+              <Crown className="inline w-12 h-12 ml-4" style={{ animation: 'glow 1s infinite' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Ultra Balance Display */}
+        <div className="relative mb-10">
+          <div className="absolute inset-0 rounded-[3rem] blur-3xl opacity-70"
+               style={{ 
+                 background: `linear-gradient(135deg, ${getCurrentCurrency().color}, #ff0080, #00d4ff)`,
+                 animation: 'pulse 2s infinite'
+               }}></div>
+          
+          <div className="relative glass rounded-[3rem] p-12 neon-border"
+               style={{ borderColor: getCurrentCurrency().color }}>
+            <div className="text-center">
+              <Sparkles className="inline w-16 h-16 text-yellow-300 mb-4" style={{ animation: 'glow 1s infinite' }} />
+              <p className="text-3xl font-black text-yellow-300 mb-4 uppercase tracking-widest text-glow">
+                YOUR FORTUNE
+              </p>
+              <div className="relative inline-block">
+                <div className="text-8xl md:text-[12rem] font-black text-white mb-4 text-glow"
+                     style={{ 
+                       color: getCurrentCurrency().color,
+                       animation: 'pulse 2s infinite'
+                     }}>
+                  {getCurrentCurrency().symbol}{formatNumber(balance)}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-4">
+                <span className="text-6xl">{getCurrentCurrency().flag}</span>
+                <p className="text-5xl font-black text-white text-glow">{getCurrentCurrency().code}</p>
+                <span className="text-6xl">{getCurrentCurrency().emoji}</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* MEGA Generate Button */}
+        <button
+          onClick={generateMoney}
+          disabled={isGenerating}
+          className="w-full relative group mb-10 transform transition-all duration-200"
+          style={{ 
+            perspective: '1000px',
+            animation: isGenerating ? 'pulse 0.3s infinite' : 'float 2s ease-in-out infinite'
+          }}
+        >
+          <div className="absolute inset-0 rounded-[3rem] blur-2xl opacity-80 group-hover:opacity-100"
+               style={{ 
+                 background: 'linear-gradient(135deg, #00ff88, #00d4ff, #ff0080)',
+                 animation: 'rainbow 3s linear infinite'
+               }}></div>
+          
+          <div className="relative glass rounded-[3rem] py-16 border-8 transform group-hover:scale-105 group-active:scale-95 transition-transform"
+               style={{ 
+                 borderColor: '#00ff88',
+                 boxShadow: '0 0 60px #00ff88, inset 0 0 60px rgba(0,255,136,0.3)'
+               }}>
+            <div className="text-7xl md:text-8xl font-black text-white text-glow flex items-center justify-center gap-6">
+              <Zap className="w-20 h-20" style={{ animation: 'glow 0.5s infinite' }} />
+              {isGenerating ? (
+                <span style={{ animation: 'rainbow 1s linear infinite' }}>💥 EXPLODING! 💥</span>
+              ) : (
+                <span>🚀 GENERATE 🚀</span>
+              )}
+              <Sparkles className="w-20 h-20" style={{ animation: 'glow 0.5s infinite' }} />
+            </div>
+          </div>
+        </button>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-6 mb-10">
+          {[
+            { icon: Flame, label: 'STREAK', value: streak, color: '#ff0080' },
+            { icon: TrendingUp, label: 'BOOST', value: `${multiplier}x`, color: '#00d4ff' },
+            { icon: Crown, label: 'LEVEL', value: Math.floor(streak / 3) + 1, color: '#ffd700' }
+          ].map((stat, i) => (
+            <div key={i} className="glass rounded-3xl p-8 text-center neon-border"
+                 style={{ 
+                   borderColor: stat.color,
+                   animation: 'float 3s ease-in-out infinite',
+                   animationDelay: `${i * 0.2}s`
+                 }}>
+              <stat.icon className="w-12 h-12 mx-auto mb-3" 
+                         style={{ color: stat.color, animation: 'glow 2s infinite' }} />
+              <p className="text-white/70 text-lg font-bold mb-2">{stat.label}</p>
+              <p className="text-5xl font-black text-white text-glow" style={{ color: stat.color }}>
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Currency Selector */}
+        <div className="glass rounded-[3rem] p-8 neon-border" style={{ borderColor: '#ff8c00' }}>
+          <h2 className="text-4xl font-black text-white text-center mb-8 text-glow">
+            🌎 SELECT CURRENCY 🌍
+          </h2>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {currencies.map((currency, i) => (
+              <button
+                key={currency.code}
+                onClick={() => setSelectedCurrency(currency.code)}
+                className={`relative p-6 rounded-2xl font-bold transition-all transform hover:scale-110 ${
+                  selectedCurrency === currency.code ? 'scale-110' : ''
+                }`}
+                style={{
+                  background: selectedCurrency === currency.code 
+                    ? `linear-gradient(135deg, ${currency.color}, #ff0080)` 
+                    : 'rgba(255,255,255,0.05)',
+                  boxShadow: selectedCurrency === currency.code 
+                    ? `0 0 40px ${currency.color}` 
+                    : 'none',
+                  animation: selectedCurrency === currency.code ? 'pulse 1s infinite' : 'float 3s ease-in-out infinite',
+                  animationDelay: `${i * 0.1}s`,
+                  border: selectedCurrency === currency.code ? `3px solid ${currency.color}` : '2px solid rgba(255,255,255,0.1)'
+                }}
+              >
+                <div className="text-5xl mb-2">{currency.flag}</div>
+                <div className="text-2xl mb-1">{currency.emoji}</div>
+                <div className="text-white font-black">{currency.code}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Reset Button */}
+        <button
+          onClick={() => {
+            setBalance(0);
+            setStreak(0);
+            setMultiplier(1);
+          }}
+          className="w-full mt-8 py-6 glass rounded-3xl font-bold text-2xl text-white transition-all transform hover:scale-105 neon-border"
+          style={{ 
+            borderColor: '#ff0080',
+            animation: 'float 4s ease-in-out infinite'
+          }}
+        >
+          🔄 RESTART EMPIRE
+        </button>
+      </div>
     </div>
+  );
+};
 
-    <script>
-        // Exchange rates (for demonstration - in a real app, these would come from an API)
-        const exchangeRates = {
-            USD: { EUR: 0.85, GBP: 0.73, JPY: 110.25, CAD: 1.25, AUD: 1.35, CHF: 0.92, CNY: 6.45, INR: 74.5, BRL: 5.25, RUB: 73.8, ZAR: 14.7 },
-            EUR: { USD: 1.18, GBP: 0.86, JPY: 129.75, CAD: 1.47, AUD: 1.59, CHF: 1.08, CNY: 7.59, INR: 87.65, BRL: 6.18, RUB: 86.85, ZAR: 17.3 },
-            GBP: { USD: 1.37, EUR: 1.16, JPY: 151.1, CAD: 1.71, AUD: 1.85, CHF: 1.26, CNY: 8.84, INR: 102.1, BRL: 7.2, RUB: 101.2, ZAR: 20.15 },
-            JPY: { USD: 0.0091, EUR: 0.0077, GBP: 0.0066, CAD: 0.011, AUD: 0.012, CHF: 0.0083, CNY: 0.058, INR: 0.68, BRL: 0.048, RUB: 0.67, ZAR: 0.13 },
-            CAD: { USD: 0.8, EUR: 0.68, GBP: 0.585, JPY: 90.9, AUD: 1.08, CHF: 0.736, CNY: 5.16, INR: 59.6, BRL: 4.2, RUB: 59.05, ZAR: 11.76 },
-            AUD: { USD: 0.74, EUR: 0.63, GBP: 0.54, JPY: 83.3, CAD: 0.925, CHF: 0.68, CNY: 4.78, INR: 55.2, BRL: 3.89, RUB: 54.65, ZAR: 10.89 },
-            CHF: { USD: 1.09, EUR: 0.925, GBP: 0.795, JPY: 120.5, CAD: 1.36, AUD: 1.47, CNY: 7.01, INR: 81, BRL: 5.71, RUB: 80.2, ZAR: 15.98 },
-            CNY: { USD: 0.155, EUR: 0.132, GBP: 0.113, JPY: 17.24, CAD: 0.194, AUD: 0.209, CHF: 0.143, INR: 11.55, BRL: 0.814, RUB: 11.44, ZAR: 2.28 },
-            INR: { USD: 0.0134, EUR: 0.0114, GBP: 0.0098, JPY: 1.47, CAD: 0.0168, AUD: 0.0181, CHF: 0.0123, CNY: 0.0866, BRL: 0.0704, RUB: 0.99, ZAR: 0.197 },
-            BRL: { USD: 0.19, EUR: 0.162, GBP: 0.139, JPY: 20.83, CAD: 0.238, AUD: 0.257, CHF: 0.175, CNY: 1.23, INR: 14.2, RUB: 14.05, ZAR: 2.8 },
-            RUB: { USD: 0.0135, EUR: 0.0115, GBP: 0.0099, JPY: 1.49, CAD: 0.0169, AUD: 0.0183, CHF: 0.0125, CNY: 0.0874, INR: 1.01, BRL: 0.0712, ZAR: 0.199 },
-            ZAR: { USD: 0.068, EUR: 0.0578, GBP: 0.0496, JPY: 7.69, CAD: 0.085, AUD: 0.0918, CHF: 0.0626, CNY: 0.439, INR: 5.08, BRL: 0.357, RUB: 5.03 }
-        };
-
-        // DOM elements
-        const amountInput = document.getElementById('amount');
-        const fromCurrency = document.getElementById('from-currency');
-        const toCurrency = document.getElementById('to-currency');
-        const swapBtn = document.getElementById('swap-currencies');
-        const convertBtn = document.getElementById('convert');
-        const resultAmount = document.getElementById('result-amount');
-        const conversionText = document.getElementById('conversion-text');
-
-        // Convert currency function
-        function convertCurrency() {
-            const amount = parseFloat(amountInput.value);
-            const from = fromCurrency.value;
-            const to = toCurrency.value;
-            
-            if (isNaN(amount) || amount <= 0) {
-                alert('Please enter a valid amount');
-                return;
-            }
-            
-            let result;
-            
-            if (from === to) {
-                result = amount;
-            } else {
-                // Get the exchange rate
-                const rate = exchangeRates[from][to];
-                result = amount * rate;
-            }
-            
-            // Format the result with proper decimal places
-            resultAmount.textContent = result.toFixed(2);
-            conversionText.textContent = `${amount} ${from} = ${result.toFixed(2)} ${to}`;
-        }
-
-        // Swap currencies function
-        function swapCurrencies() {
-            const fromValue = fromCurrency.value;
-            const toValue = toCurrency.value;
-            
-            fromCurrency.value = toValue;
-            toCurrency.value = fromValue;
-            
-            // Convert immediately after swapping
-            convertCurrency();
-        }
-
-        // Event listeners
-        convertBtn.addEventListener('click', convertCurrency);
-        swapBtn.addEventListener('click', swapCurrencies);
-
-        // Convert on page load
-        window.addEventListener('load', convertCurrency);
-
-        // Convert when input changes
-        amountInput.addEventListener('input', convertCurrency);
-        fromCurrency.addEventListener('change', convertCurrency);
-        toCurrency.addEventListener('change', convertCurrency);
-    </script>
-</body>
-</html>
+export default MoneyGenerator;
